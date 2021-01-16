@@ -6,27 +6,28 @@ export class StreamCache<T> {
   public refresh() {
     this._obs$ = null;
     this._reloader$$.next();
-    this._listener$$.next({});
+    this._listener$$.next({}); // Might not be needed here
   }
   
   private configureCache<T>(
     data: string,
-    func: Observable<T>,
-    reloader$$: Subject<void>,
-    listener?: Subject<T>): Observable<T> {
-    if (!this[data]) {
-      console.log('Cache miss', data, listener);
-      this[data] = func;
+    func: Observable<T>): Observable<T> {
+    if (!this[`_${data}\$`]) {
+      console.log('❌ - Cache Miss');
+      this[`_${data}\$`] = func;
 
-      if (listener) {
-        console.log('Getting Data', data);
-        this[data].subscribe(x => listener.next(x));
-
-        return listener;
-      }
+      this[`_${data}\$`].subscribe(x => {
+        if (this[`_${data}Listener\$\$`]) {
+          console.log('🧏🏾- Listener Updated', x);
+          this[`_${data}Listener\$\$`].next(x)
+        } else {
+          console.log('🤦🏾‍♀️ - Listener Setup', x);
+          this[`_${data}Listener\$\$`] = new BehaviorSubject<T>(x)
+        }
+      });
     }
 
-    console.log('Cache hit', data);
-    return listener || this[data];
+    console.log('✔️ - Cache Hit');
+    return this[`_${data}Listener\$\$`] ?? this[`_${data}\$`];
   }
 }
